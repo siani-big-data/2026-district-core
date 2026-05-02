@@ -1,0 +1,61 @@
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+.kotlin
+
+### IntelliJ IDEA ###
+.idea/modules.xml
+.idea/jarRepositories.xml
+.idea/compiler.xml
+.idea/libraries/
+*.iws
+*.iml
+*.ipr
+*.geojson
+*.csv
+
+### Eclipse ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+
+### VS Code ###
+.vscode/
+
+### Mac OS ###
+.DS_Store
+
+# Archivos de caché y serialización de Java
+*.dat
+*.ser
+src/main/resources/serializedStates/*.dat
+
+# Archivos GIS
+*.shp
+*.shx
+*.dbf
+*.prj
+*.cpg
+
+# Archivos de monitoreo de memoria y logs
+*.jfr
+*.log
+
+# Ignorar toda la carpeta de recursos (Shapefiles, ZIPs, cachés, etc.)
+src/main/resources/
+
+src/main/java/siani/districting/benchmarks/
+src/main/java/siani/districting/timeseries/
