@@ -22,19 +22,26 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class ShapefileReader {
+public class  ShapefileReader {
 
     private ShapefileReader() {}
 
-    public static State read(String path, String name, PrecinctInfoContainer container) throws IOException {
+    public static State read(String path,
+                             String name,
+                             PrecinctInfoContainer container,
+                             String populationCsvPath) throws IOException {
         DataStore store = FileDataStoreFinder.getDataStore(new File(path));
         if (store == null) throw new IOException("can not find store for " + path);
-        return createState(store, name, container);
+        return createState(store, name, container, populationCsvPath);
     }
 
-    private static State createState(DataStore store, String name, PrecinctInfoContainer container) throws IOException {
+    private static State createState(DataStore store,
+                                     String name,
+                                     PrecinctInfoContainer container,
+                                     String populationCsvPath) throws IOException {
         Map<Integer, List<Precinct>> precintsMap = createPrecincts(store, container);
         List<District> districtsList = buildDistricts(precintsMap);
+        assignPopulation(districtsList, populationCsvPath);
         return new State(name, districtsList);
     }
 
@@ -43,9 +50,23 @@ public class ShapefileReader {
         precintsMap.keySet().forEach(districtId -> {
             District newDistrict = new District(districtId, precintsMap.get(districtId));
             districtsList.add(newDistrict);
-
         });
         return districtsList;
+    }
+
+    private static void assignPopulation(List<District> districts, String populationCsvPath) throws IOException {
+        Map<Object, Object> districtPopulationMap = CsvToMapReader.read(populationCsvPath, true);
+        for (District district: districts){
+            List<Integer> population = PopulationGenerator.generatePopulationPerPrecinct(
+                    district.precinctList().size(),
+                    (Integer) districtPopulationMap.get(district.uniqueId()),
+                    district.uniqueId()
+            );
+
+            for (int i = 0; i < district.precinctList().size(); i++) {
+                district.precinctList().get(i).setPopulation(population.get(i));
+            }
+        }
     }
 
     private static Map<Integer, List<Precinct>> createPrecincts(DataStore store, PrecinctInfoContainer container) throws IOException {

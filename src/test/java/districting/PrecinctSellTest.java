@@ -20,7 +20,8 @@ public class PrecinctSellTest {
     void shouldProcessPrecinctExchange() throws IOException {
 
         State tennessee = ShapefileReader.read("src/main/resources/tn_2024_gen_prec/tn_2024_gen_cong_prec/tn_2024_gen_cong_prec.shp",
-                                            "tennessee", null);
+                                            "tennessee", null,
+                "src/main/resources/tn_2024_gen_prec_NUEVO/tn_2024_gen_cong_prec/tennessee_pop_per_cong_distr.csv");
 
         AdjacencySolver solver = new AdjacencySolver(tennessee.precints());
         SerializerManager serializerManager = new SerializerManager("src/main/resources/tenneesee_store");

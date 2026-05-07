@@ -18,8 +18,8 @@ public class PrecinctInfoTableTest {
 
         State tennessee = ShapefileReader.read("src/main/resources/tn_2024_gen_prec/tn_2024_gen_cong_prec/tn_2024_gen_cong_prec.shp",
                 "Tennesee",
-                precinctInfoTable
-
+                precinctInfoTable,
+                null
         );
 
         String targetPrecinctId = "Johnson-:-1A Laurel";

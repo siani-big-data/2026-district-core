@@ -33,7 +33,7 @@ public class MatrixBoundaryCalculatorTest {
         PrecinctInfoContainer container = new GuavaPrecinctInfoTable();
 
         long start = System.currentTimeMillis();
-        state = ShapefileReader.read("src/main/resources/tn_2024_gen_prec_NUEVO/tn_2024_gen_cong_prec/tn_2024_gen_cong_prec.shp", "state", container);
+        state = ShapefileReader.read("src/main/resources/tn_2024_gen_prec_NUEVO/tn_2024_gen_cong_prec/tn_2024_gen_cong_prec.shp", "state", container, null);
         System.out.println("✅ Shapefile cargado en: " + (System.currentTimeMillis() - start) + " ms");
 
         start = System.currentTimeMillis();

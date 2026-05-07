@@ -9,7 +9,6 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class MatrixMultiplicationBoundaryCalculator {
-    private Set<String> differentOwnershipMatrix;
     private AdjacencySolver solver;
 
     private Map<Integer, Map<Integer, Set<Precinct>>> currentBoundariesMap;
@@ -17,36 +16,30 @@ public class MatrixMultiplicationBoundaryCalculator {
     public MatrixMultiplicationBoundaryCalculator() {}
 
     public Map<Integer, Map<Integer, Set<Precinct>>> calculateBoundariesForFirstTime(State state, AdjacencySolver solver) {
-        Map<Integer, Map<Integer, Set<Precinct>>> boundaryPrecincts = new HashMap<>();
         this.solver = solver;
-        this.currentBoundariesMap = new HashMap<>(); // Inicializamos el mapa
-        differentOwnershipMatrix = calculateDifferentOwnerMatrix(state, solver);
-        return calculateBoundariesForEachDistrict(state, solver, boundaryPrecincts);
+        this.currentBoundariesMap = new ConcurrentHashMap<>(); // Hacemos el mapa principal concurrente
+        return calculateBoundariesForEachDistrict(state);
     }
 
-    private Map<Integer, Map<Integer, Set<Precinct>>> calculateBoundariesForEachDistrict(
-            State state,
-            AdjacencySolver solver,
-            Map<Integer, Map<Integer, Set<Precinct>>> boundaryPrecincts)
+    private Map<Integer, Map<Integer, Set<Precinct>>> calculateBoundariesForEachDistrict(State state)
     {
         long start = System.currentTimeMillis();
         state.districts().forEach(district -> {
-
-            boundaryPrecincts.put(district.uniqueId(), calculateBoundariesOfDistrict(state, district, solver, differentOwnershipMatrix));
-
+            currentBoundariesMap.put(district.uniqueId(), calculateBoundariesOfDistrict(state, district));
         } );
         System.out.println("Tiempo de construcción del mapa: " + (System.currentTimeMillis() - start) + " ms");
-        currentBoundariesMap = boundaryPrecincts;
-        return boundaryPrecincts;
+        return currentBoundariesMap;
     }
 
-    private Map<Integer, Set<Precinct>> calculateBoundariesOfDistrict(State state, District district, AdjacencySolver solver, Set<String> differentOwnershipMatrix) {
+    private Map<Integer, Set<Precinct>> calculateBoundariesOfDistrict(State state, District district) {
         Map<Integer, Set<Precinct>> boundariesPerNeighbourDistrictMap = new ConcurrentHashMap<>();
+        Map<Precinct, Integer> stateMap = state.getPrecinctsAndDistrictsMap();
+
         district.precinctList().parallelStream().forEach(precinct -> {
             List<Precinct> adjacents = solver.getAdjacents(precinct);
             for (Precinct adjacent : adjacents) {
-                if (differentOwnershipMatrix.contains(sortIds(precinct,adjacent))) {
-                    int adjacentDistrictId = state.getPrecinctsAndDistrictsMap().get(adjacent);
+                Integer adjacentDistrictId = stateMap.get(adjacent);
+                if (!adjacentDistrictId.equals(district.uniqueId())) {
                     boundariesPerNeighbourDistrictMap.computeIfAbsent(adjacentDistrictId,
                             k -> ConcurrentHashMap.newKeySet()).add(precinct);
                 }
@@ -55,35 +48,10 @@ public class MatrixMultiplicationBoundaryCalculator {
         return boundariesPerNeighbourDistrictMap;
     }
 
-    private Set<String> calculateDifferentOwnerMatrix(State state, AdjacencySolver solver) {
-        long start = System.currentTimeMillis();
-        Set<String> differentOwnershipMatrix = new HashSet<>();
-
-        state.precints().parallelStream().forEach(precinct -> {
-            solver.getAdjacents(precinct).forEach(adjacent -> {
-                if (!Objects.equals(state.getPrecinctsAndDistrictsMap().get(precinct), state.getPrecinctsAndDistrictsMap().get(adjacent))) {
-                    differentOwnershipMatrix.add(sortIds(precinct, adjacent));
-                }
-            });
-        });
-        System.out.println("tiempo calculo diff ownership: " + (System.currentTimeMillis() - start) + " ms." );
-        return differentOwnershipMatrix;
-    }
-
-    private String sortIds(Precinct precinct1, Precinct precinct2) {
-        return precinct1.id().compareTo(precinct2.id()) < 0 ? precinct1.id() + "," + precinct2.id()
-                : precinct2.id() + "," + precinct1.id();
-    }
-
     // ----------UPDATE-MATRIX---------------
 
     public Map<Integer, Map<Integer, Set<Precinct>>> updateMatrix(State newState, Set<Precinct> changes) {
         long start = System.currentTimeMillis();
-
-        for (Precinct precinct : changes) {
-            deleteAllEntries(precinct);
-            calculateNewEntriesOwnership(newState, precinct);
-        }
 
         Set<Precinct> affectedPrecincts = new HashSet<>(changes);
         for (Precinct p : changes) {
@@ -94,19 +62,23 @@ public class MatrixMultiplicationBoundaryCalculator {
             for (Set<Precinct> borderSet : neighborsMap.values()) {
                 borderSet.removeAll(affectedPrecincts);
             }
+
+            neighborsMap.entrySet().removeIf(entry -> entry.getValue().isEmpty());
         }
 
+        Map<Precinct, Integer> stateMap = newState.getPrecinctsAndDistrictsMap();
+
         for (Precinct p : affectedPrecincts) {
-            Integer myDistrictId = newState.getPrecinctsAndDistrictsMap().get(p);
+            Integer disctrictId = stateMap.get(p);
 
             for (Precinct neighbor : solver.getAdjacents(p)) {
-                Integer neighborDistrictId = newState.getPrecinctsAndDistrictsMap().get(neighbor);
+                Integer neighborDistrictId = stateMap.get(neighbor);
 
-                if (!neighborDistrictId.equals(myDistrictId)) {
+                if (!neighborDistrictId.equals(disctrictId)) {
 
                     currentBoundariesMap
-                            .computeIfAbsent(myDistrictId, k -> new HashMap<>())
-                            .computeIfAbsent(neighborDistrictId, k -> new HashSet<>())
+                            .computeIfAbsent(disctrictId, k -> new ConcurrentHashMap<>())
+                            .computeIfAbsent(neighborDistrictId, k -> ConcurrentHashMap.newKeySet())
                             .add(p);
                 }
             }
@@ -115,20 +87,6 @@ public class MatrixMultiplicationBoundaryCalculator {
         System.out.println("Updating time: " + (System.currentTimeMillis() - start) + " ms");
 
         return currentBoundariesMap;
-    }
-
-    private void calculateNewEntriesOwnership(State newState, Precinct precinct) {
-        solver.getAdjacents(precinct).forEach(adjacent -> {
-            if (!Objects.equals(newState.getPrecinctsAndDistrictsMap().get(precinct), newState.getPrecinctsAndDistrictsMap().get(adjacent))) {
-                differentOwnershipMatrix.add(sortIds(precinct, adjacent));
-            }
-        });
-    }
-
-    private void deleteAllEntries(Precinct precinct) {
-        solver.getAdjacents(precinct).forEach(adjacent -> {
-            differentOwnershipMatrix.remove(sortIds(precinct,adjacent));
-        });
     }
 
 }

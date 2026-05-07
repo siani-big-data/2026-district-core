@@ -20,7 +20,7 @@ public class BoundaryCalculatorTest {
     long c1 = System.currentTimeMillis();
     PrecinctInfoContainer container = new GuavaPrecinctInfoTable();
     State tennessee = ShapefileReader.read("src/main/resources/tn_2024_gen_prec_NUEVO/tn_2024_gen_cong_prec/tn_2024_gen_cong_prec.shp",
-            "tennessee", container);
+            "tennessee", container, null);
     long t1 = System.currentTimeMillis();
 
     long c2 = System.currentTimeMillis();

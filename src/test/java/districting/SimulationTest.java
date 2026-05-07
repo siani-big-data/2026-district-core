@@ -14,10 +14,12 @@ import siani.districting.architecture.engine.environment.actionfiltering.ActionF
 import siani.districting.architecture.engine.environment.actionfiltering.Constraint;
 import siani.districting.architecture.model.Precinct;
 import siani.districting.architecture.model.State;
+import siani.districting.architecture.precinctinfo.PrecinctInfoContainer;
 import siani.districting.architecture.precinctinfo.guava.GuavaPrecinctInfoTable;
 import siani.districting.architecture.stores.SerializerManager;
 import siani.districting.architecture.stores.StateDelta;
 import siani.districting.readers.ShapefileReader;
+import siani.districting.readers.CsvToMapReader;
 import siani.districting.architecture.stores.writer.StateCsvExporter;
 
 import java.io.IOException;
@@ -30,26 +32,36 @@ public class SimulationTest {
     private static AdjacencySolver adjacencySolver;
     private static State currentState;
     private static SerializerManager manager;
-    private static ActionFilter filter = ActionFilter.create()
-            .addConstraint(Constraint.MIN_PRECINCTS);
+    private static ActionFilter filter;
     private static List<Agent> agents;
+    private static PrecinctInfoContainer table;
+    private static Map<Object, Object> partyMapping;
 
     @BeforeAll
     static void setUp() throws IOException {
         long start = System.currentTimeMillis();
-        manager = new SerializerManager("src/main/resources/simulationTest_store", 100);
+        manager = new SerializerManager("src/main/resources/test", 100);
+
+        table = new GuavaPrecinctInfoTable();
+        partyMapping = CsvToMapReader.read("src/main/resources/candidateToPartyTennessee.csv", true);
 
         if (manager.getLastState() != null) {
             System.out.println("Estado recuperado exitosamente desde archivos.");
             currentState = manager.getLastState();
             adjacencySolver = new AdjacencySolver(currentState.precints());
         } else {
-            GuavaPrecinctInfoTable table = new GuavaPrecinctInfoTable();
-            currentState = ShapefileReader.read("src/main/resources/tn_2024_gen_prec_NUEVO/tn_2024_gen_cong_prec/tn_2024_gen_cong_prec.shp", "tennessee", table);
+            currentState = ShapefileReader.read("src/main/resources/tn_2024_gen_prec_NUEVO/tn_2024_gen_cong_prec/tn_2024_gen_cong_prec.shp",
+                    "tennessee",
+                    table,
+                    "src/main/resources/tn_2024_gen_prec_NUEVO/tn_2024_gen_cong_prec/tennessee_pop_per_cong_distr.csv");
             adjacencySolver = new AdjacencySolver(currentState.precints());
             manager.serialize(currentState);
             manager.serialize(adjacencySolver.getAdjacencySet());
         }
+
+         filter = ActionFilter.create()
+                .addConstraint(Constraint.MIN_POPULATION.factors(10, 5, 0.1))
+                .addConstraint(Constraint.MAX_POPULATION.factors(10, 5, 0.1));
 
         agents = new ArrayList<>();
         for (int i=1; i <= currentState.districts().size(); i++) {
@@ -64,7 +76,7 @@ public class SimulationTest {
         MatrixMultiplicationBoundaryCalculator boundariesCalculator = new MatrixMultiplicationBoundaryCalculator();
         Map<Integer, Map<Integer, Set<Precinct>>> borders = boundariesCalculator.calculateBoundariesForFirstTime(currentState, adjacencySolver);
         long start = 0L;
-        int maxSteps = 1000;
+        int maxSteps = 100;
         long beforeSim = System.currentTimeMillis();
         while (step < maxSteps) {
             System.out.println("Iniciando simulación step " + step++ + "...");
@@ -86,6 +98,7 @@ public class SimulationTest {
                     .filter(Objects::nonNull)
                     .collect(Collectors.groupingBy(Action::precinct))
                     .values().stream()
+                    //CHOQUE -> borrar acciones que quieran comprar el mismo precinto
                     .filter(list -> list.size() == 1)
                     .flatMap(List::stream)
                     .collect(Collectors.toList());
@@ -101,7 +114,10 @@ public class SimulationTest {
             borders = boundariesCalculator.updateMatrix(newState, differents);
             currentState = newState;
 
-            StateCsvExporter.export(currentState, "src/main/resources/simulationTest_store/step_" + step + ".csv");
+            StateCsvExporter.exportWithWinnersPerDistrict(currentState,
+                    "src/main/resources/test/step_" + step + ".csv" ,
+                    table,
+                    partyMapping);
 
             System.out.println("Tiempo de step: " + (System.currentTimeMillis() - start) + " ms");
         }

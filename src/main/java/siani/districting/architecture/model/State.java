@@ -10,11 +10,15 @@ public class  State implements Serializable {
     private final String name;
     private final List<District> districts;
     private final Map<Precinct, Integer> precinctsAndDistrictsMap;
+    private final int totalPopulation;
+    private final int averagePopulationPerDistrict;
 
     public State(String name, List<District> districts) {
         this.name = name;
         this.districts = districts;
         this.precinctsAndDistrictsMap = buildMap();
+        this.totalPopulation = districts.stream().mapToInt(District::population).sum();
+        this.averagePopulationPerDistrict = totalPopulation / districts.size();
     }
 
     public String getName() {
@@ -44,4 +48,11 @@ public class  State implements Serializable {
         return precincts;
     }
 
+    public int totalPopulation() {
+        return totalPopulation;
+    }
+
+    public int averagePopulationPerDistrict() {
+        return averagePopulationPerDistrict;
+    }
 }
