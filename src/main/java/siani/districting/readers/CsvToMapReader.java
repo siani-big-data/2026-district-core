@@ -21,8 +21,7 @@ public class CsvToMapReader {
                     .filter(columns -> columns.length >= 2)
                     .collect(Collectors.toMap(
                             columns -> parseValue(columns[0].trim()),
-                            columns -> parseValue(columns[1].trim()),
-                            (existingValue, newValue) -> newValue 
+                            columns -> parseValue(columns[1].trim())
                     ));
         }
     }

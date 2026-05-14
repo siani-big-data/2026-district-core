@@ -52,12 +52,10 @@ public class MatrixMultiplicationBoundaryCalculator {
 
     public Map<Integer, Map<Integer, Set<Precinct>>> updateMatrix(State newState, Set<Precinct> changes) {
         long start = System.currentTimeMillis();
-
         Set<Precinct> affectedPrecincts = new HashSet<>(changes);
         for (Precinct p : changes) {
             affectedPrecincts.addAll(solver.getAdjacents(p));
         }
-
         for (Map<Integer, Set<Precinct>> neighborsMap : currentBoundariesMap.values()) {
             for (Set<Precinct> borderSet : neighborsMap.values()) {
                 borderSet.removeAll(affectedPrecincts);
@@ -65,9 +63,7 @@ public class MatrixMultiplicationBoundaryCalculator {
 
             neighborsMap.entrySet().removeIf(entry -> entry.getValue().isEmpty());
         }
-
         Map<Precinct, Integer> stateMap = newState.getPrecinctsAndDistrictsMap();
-
         for (Precinct p : affectedPrecincts) {
             Integer disctrictId = stateMap.get(p);
 
@@ -83,8 +79,6 @@ public class MatrixMultiplicationBoundaryCalculator {
                 }
             }
         }
-
-        System.out.println("Updating time: " + (System.currentTimeMillis() - start) + " ms");
 
         return currentBoundariesMap;
     }

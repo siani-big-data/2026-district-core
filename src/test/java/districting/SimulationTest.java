@@ -11,7 +11,7 @@ import siani.districting.architecture.engine.environment.IslandDetector;
 import siani.districting.architecture.engine.environment.MatrixMultiplicationBoundaryCalculator;
 import siani.districting.architecture.engine.environment.StateFactory;
 import siani.districting.architecture.engine.environment.actionfiltering.ActionFilter;
-import siani.districting.architecture.engine.environment.actionfiltering.Constraint;
+import siani.districting.architecture.engine.environment.actionfiltering.PopulationConstraint;
 import siani.districting.architecture.model.Precinct;
 import siani.districting.architecture.model.State;
 import siani.districting.architecture.precinctinfo.PrecinctInfoContainer;
@@ -40,28 +40,38 @@ public class SimulationTest {
     @BeforeAll
     static void setUp() throws IOException {
         long start = System.currentTimeMillis();
-        manager = new SerializerManager("src/main/resources/test", 100);
+        manager = new SerializerManager("src/main/resources/simulationTest_store", 100);
 
-        table = new GuavaPrecinctInfoTable();
         partyMapping = CsvToMapReader.read("src/main/resources/candidateToPartyTennessee.csv", true);
 
         if (manager.getLastState() != null) {
             System.out.println("Estado recuperado exitosamente desde archivos.");
             currentState = manager.getLastState();
-            adjacencySolver = new AdjacencySolver(currentState.precints());
+
+            table = manager.getLastContainer();
+            if (table == null) table = new GuavaPrecinctInfoTable();
+            
+            Set<String> recoveredAdjacency = manager.getLastAdjacencySet();
+            if (recoveredAdjacency != null) {
+                adjacencySolver = new AdjacencySolver(currentState.precints(), recoveredAdjacency);
+            } else {
+                adjacencySolver = new AdjacencySolver(currentState.precints());
+            }
+
         } else {
+            table = new GuavaPrecinctInfoTable();
             currentState = ShapefileReader.read("src/main/resources/tn_2024_gen_prec_NUEVO/tn_2024_gen_cong_prec/tn_2024_gen_cong_prec.shp",
                     "tennessee",
                     table,
                     "src/main/resources/tn_2024_gen_prec_NUEVO/tn_2024_gen_cong_prec/tennessee_pop_per_cong_distr.csv");
             adjacencySolver = new AdjacencySolver(currentState.precints());
-            manager.serialize(currentState);
-            manager.serialize(adjacencySolver.getAdjacencySet());
+            manager.serializeAll(currentState, adjacencySolver.getAdjacencySet(), table);
         }
 
          filter = ActionFilter.create()
-                .addConstraint(Constraint.MIN_POPULATION.factors(10, 5, 0.1))
-                .addConstraint(Constraint.MAX_POPULATION.factors(10, 5, 0.1));
+                .addConstraint(ActionFilter.EpochName.EXPLORATIVE, new PopulationConstraint(5.0))
+                .addConstraint(ActionFilter.EpochName.TRANSITION, new PopulationConstraint(2.5))
+                .addConstraint(ActionFilter.EpochName.EXPLOITATIVE, new PopulationConstraint(0.1));
 
         agents = new ArrayList<>();
         for (int i=1; i <= currentState.districts().size(); i++) {
@@ -75,7 +85,7 @@ public class SimulationTest {
         int step = manager.getStepCount();
         MatrixMultiplicationBoundaryCalculator boundariesCalculator = new MatrixMultiplicationBoundaryCalculator();
         Map<Integer, Map<Integer, Set<Precinct>>> borders = boundariesCalculator.calculateBoundariesForFirstTime(currentState, adjacencySolver);
-        long start = 0L;
+        long start;
         int maxSteps = 100;
         long beforeSim = System.currentTimeMillis();
         while (step < maxSteps) {
@@ -115,7 +125,7 @@ public class SimulationTest {
             currentState = newState;
 
             StateCsvExporter.exportWithWinnersPerDistrict(currentState,
-                    "src/main/resources/test/step_" + step + ".csv" ,
+                    "src/main/resources/simulationTest_store/step_" + step + ".csv" ,
                     table,
                     partyMapping);
 

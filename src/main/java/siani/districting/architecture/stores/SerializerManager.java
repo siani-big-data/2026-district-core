@@ -2,10 +2,14 @@ package siani.districting.architecture.stores;
 
 import siani.districting.architecture.model.Precinct;
 import siani.districting.architecture.model.State;
+import siani.districting.architecture.precinctinfo.PrecinctInfoContainer;
 import siani.districting.architecture.stores.serializers.AdjacencySerializer;
 import siani.districting.architecture.stores.serializers.DeltaSerializer;
+import siani.districting.architecture.stores.serializers.PrecinctInfoContainerSerializer;
 import siani.districting.architecture.stores.serializers.StateSerializer;
+import siani.districting.architecture.stores.deserializers.AdjacencyDeserializer;
 import siani.districting.architecture.stores.deserializers.DeltaDeserializer;
+import siani.districting.architecture.stores.deserializers.PrecinctInfoContainerDeserializer;
 import siani.districting.architecture.stores.reader.FileReader;
 
 import java.io.File;
@@ -17,10 +21,13 @@ public class SerializerManager {
     private Map<Precinct, Integer> changesMap;
     private int stepCount;
     private State lastState;
+    private Set<String> lastAdjacencySet;
+    private PrecinctInfoContainer lastContainer;
     private int snapshotStep = 50;
     DeltaSerializer deltaSerializer = new DeltaSerializer();
     StateSerializer stateSerializer = new StateSerializer();
     AdjacencySerializer adjacencySerializer = new AdjacencySerializer();
+    PrecinctInfoContainerSerializer containerSerializer = new PrecinctInfoContainerSerializer();
 
 
     public SerializerManager(String dirPath, int snapshotStep) throws IOException {
@@ -49,6 +56,16 @@ public class SerializerManager {
             this.stepCount = lastStep + 1;
             System.out.println("Recuperando último estado guardado");
             fetchLastState(lastStep);
+            
+            File adjacencyFile = new File(path + "/adjacency.dat");
+            if (adjacencyFile.exists()) {
+                this.lastAdjacencySet = AdjacencyDeserializer.deserialize(FileReader.read(adjacencyFile.getAbsolutePath()));
+            }
+
+            File containerFile = new File(path + "/precinctInfoContainer.dat");
+            if (containerFile.exists()) {
+                this.lastContainer = PrecinctInfoContainerDeserializer.deserialize(FileReader.read(containerFile.getAbsolutePath()));
+            }
         } else {
             dir.mkdirs();
         }
@@ -58,12 +75,20 @@ public class SerializerManager {
         return lastState;
     }
 
+    public Set<String> getLastAdjacencySet() {
+        return lastAdjacencySet;
+    }
+
+    public PrecinctInfoContainer getLastContainer() {
+        return lastContainer;
+    }
+
     public int getStepCount() {
         return stepCount;
     }
 
     private void fetchLastState(int lastIndex) throws IOException {
-        this.lastState = StateRestorer.restore(new File(path), lastIndex);
+        this.lastState = StateRestorer.restore(new File(path), lastIndex, snapshotStep);
         this.stepCount = lastIndex + 1;
         if (lastIndex % snapshotStep != 0) {
             int snapshotNumber = lastIndex / snapshotStep;
@@ -117,11 +142,7 @@ public class SerializerManager {
     }
 
     public void serialize(Set<String> adjacency) throws IOException {
-        serializeAdjacency(adjacency);
-    }
-
-    private void serializeAdjacency(Set<String> adjacencySet) throws IOException {
-        adjacencySerializer.serialize(path + "/adjacency.dat", adjacencySet);
+        adjacencySerializer.serialize(path + "/adjacency.dat", adjacency);
     }
 
     public void serialize(State state0, StateDelta delta, State state1) throws IOException {
@@ -147,6 +168,16 @@ public class SerializerManager {
         int deltaNumber = stepCount % snapshotStep;
         deltaSerializer.serialize(path + "/state" + snapshotNumber + "_delta" + deltaNumber + ".dat",
                 new StateDelta(changesMap));
+    }
+
+    public void serialize(PrecinctInfoContainer container) throws IOException {
+        containerSerializer.serialize(path + "/precinctInfoContainer.dat", container);
+    }
+
+    public void serializeAll(State state, Set<String> adjacency, PrecinctInfoContainer table) throws IOException {
+        serialize(state);
+        serialize(adjacency);
+        serialize(table);
     }
 
     public void serialize(State state) throws IOException {

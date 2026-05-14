@@ -11,7 +11,7 @@ import siani.districting.architecture.engine.environment.IslandDetector;
 import siani.districting.architecture.engine.environment.MatrixMultiplicationBoundaryCalculator;
 import siani.districting.architecture.engine.environment.StateFactory;
 import siani.districting.architecture.engine.environment.actionfiltering.ActionFilter;
-import siani.districting.architecture.engine.environment.actionfiltering.Constraint;
+import siani.districting.architecture.engine.environment.actionfiltering.PopulationConstraint;
 import siani.districting.architecture.model.Precinct;
 import siani.districting.architecture.model.State;
 import siani.districting.architecture.precinctinfo.PrecinctInfoContainer;
@@ -42,15 +42,25 @@ public class TexasTest {
         long start = System.currentTimeMillis();
         manager = new SerializerManager("/Volumes/Samba/texas_store/dat", 100);
 
-        table = new GuavaPrecinctInfoTable();
         partyMapping = CsvToMapReader
                 .read("src/main/resources/tx_2024_gen_tx_vtd/tx_2024_gen_cong_tx_vtd/candidateToPartyTexas.csv", true);
 
         if (manager.getLastState() != null) {
             System.out.println("Estado recuperado exitosamente desde archivos.");
             currentState = manager.getLastState();
-            adjacencySolver = new AdjacencySolver(currentState.precints());
+
+            table = manager.getLastContainer();
+            if (table == null) table = new GuavaPrecinctInfoTable();
+            
+            Set<String> recoveredAdjacency = manager.getLastAdjacencySet();
+            if (recoveredAdjacency != null) {
+                adjacencySolver = new AdjacencySolver(currentState.precints(), recoveredAdjacency);
+            } else {
+                adjacencySolver = new AdjacencySolver(currentState.precints());
+            }
+
         } else {
+            table = new GuavaPrecinctInfoTable();
             currentState = ShapefileReader.read("src/main/resources/tx_2024_gen_tx_vtd/tx_2024_gen_cong_tx_vtd/tx_2024_gen_cong_tx_vtd.shp",
                     "texas",
                     table,
@@ -58,11 +68,13 @@ public class TexasTest {
             adjacencySolver = new AdjacencySolver(currentState.precints());
             manager.serialize(currentState);
             manager.serialize(adjacencySolver.getAdjacencySet());
+            manager.serialize(table);
         }
 
         filter = ActionFilter.create()
-                .addConstraint(Constraint.MIN_POPULATION.factors(10, 5, 0.1))
-                .addConstraint(Constraint.MAX_POPULATION.factors(10, 5, 0.1));
+                .addConstraint(ActionFilter.EpochName.EXPLORATIVE, new PopulationConstraint(10))
+                .addConstraint(ActionFilter.EpochName.TRANSITION, new PopulationConstraint(5))
+                .addConstraint(ActionFilter.EpochName.EXPLOITATIVE, new PopulationConstraint(0.1));
 
         agents = new ArrayList<>();
         for (int i=1; i <= currentState.districts().size(); i++) {
@@ -76,7 +88,7 @@ public class TexasTest {
         int step = manager.getStepCount();
         MatrixMultiplicationBoundaryCalculator boundariesCalculator = new MatrixMultiplicationBoundaryCalculator();
         Map<Integer, Map<Integer, Set<Precinct>>> borders = boundariesCalculator.calculateBoundariesForFirstTime(currentState, adjacencySolver);
-        long start = 0L;
+        long start;
         int maxSteps = 100;
         long beforeSim = System.currentTimeMillis();
         while (step < maxSteps) {

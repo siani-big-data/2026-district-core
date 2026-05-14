@@ -19,11 +19,13 @@ public class ElectionCalculator {
         Map<Integer, String> winnersPerDistrictMap = new ConcurrentHashMap<>();
         state.districts().parallelStream().forEach(district -> {
             Map<String, Integer> votesPerPartyMap = new HashMap<>();
-            for (Precinct precint : district.precinctList()) {
-                for (String column : container.getColumnNames()) {
-                    Integer precinctValue = container.getValueOf(precint.id(), column);
-                    if (precinctValue != null) {
-                        votesPerPartyMap.merge(column, precinctValue, Integer::sum);
+            for (Precinct precinct : district.precinctList()) {
+                for (String column : container.getInfoOf(precinct.id()).keySet()) {
+                    if (column.startsWith("GCON")) {
+                        Integer columnValue = container.getValueOf(precinct.id(), column);
+                        if (columnValue != null) {
+                            votesPerPartyMap.merge(column, columnValue, Integer::sum);
+                        }
                     }
                 }
             }

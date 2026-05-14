@@ -7,5 +7,5 @@ import siani.districting.architecture.model.State;
 import java.util.List;
 
 public interface ConstraintCommand {
-    List<Action> filter(State state, AdjacencySolver solver, List<Action> actionList, int simulationStep);
+    List<Action> filter(State state, AdjacencySolver solver, List<Action> actionList);
 }

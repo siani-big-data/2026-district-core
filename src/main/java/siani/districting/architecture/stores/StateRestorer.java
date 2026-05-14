@@ -11,12 +11,12 @@ import java.io.IOException;
 
 public class StateRestorer {
 
-    public static State restore(File dir, int lastIndex) throws IOException {
-        int stateIndex = (lastIndex / 50);
+    public static State restore(File dir, int lastIndex, int snapshotStep) throws IOException {
+        int stateIndex = (lastIndex / snapshotStep);
         File snapshotFile = new File(dir, "state" + stateIndex + ".dat");
         State state = StateDeserializer.deserialize(FileReader.read(snapshotFile.getAbsolutePath()));
-        if (lastIsDelta(lastIndex)) {
-            int deltaIndex = lastIndex % 50;
+        if (lastIsDelta(lastIndex, snapshotStep)) {
+            int deltaIndex = lastIndex % snapshotStep;
             File deltaFile = new File(dir, "state" + stateIndex + "_delta" + deltaIndex + ".dat");
             StateDelta delta = DeltaDeserializer.deserialize(FileReader.read(deltaFile.getAbsolutePath()));
             state = StateFactory.applyDelta(state, delta);
@@ -24,7 +24,7 @@ public class StateRestorer {
         return state;
     }
 
-    private static boolean lastIsDelta(int lastIndex) {
-        return lastIndex % 50 != 0;
+    private static boolean lastIsDelta(int lastIndex, int snapshotStep) {
+        return lastIndex % snapshotStep != 0;
     }
 }
