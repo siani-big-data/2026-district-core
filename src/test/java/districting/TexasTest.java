@@ -11,7 +11,7 @@ import siani.districting.architecture.engine.environment.IslandDetector;
 import siani.districting.architecture.engine.environment.MatrixMultiplicationBoundaryCalculator;
 import siani.districting.architecture.engine.environment.StateFactory;
 import siani.districting.architecture.engine.environment.actionfiltering.ActionFilter;
-import siani.districting.architecture.engine.environment.actionfiltering.PopulationConstraint;
+import siani.districting.architecture.engine.environment.actionfiltering.constraints.PopulationConstraint;
 import siani.districting.architecture.model.Precinct;
 import siani.districting.architecture.model.State;
 import siani.districting.architecture.precinctinfo.PrecinctInfoContainer;
@@ -72,9 +72,9 @@ public class TexasTest {
         }
 
         filter = ActionFilter.create()
-                .addConstraint(ActionFilter.EpochName.EXPLORATIVE, new PopulationConstraint(10))
-                .addConstraint(ActionFilter.EpochName.TRANSITION, new PopulationConstraint(5))
-                .addConstraint(ActionFilter.EpochName.EXPLOITATIVE, new PopulationConstraint(0.1));
+                .addConstraint(ActionFilter.EpochName.EXPLORATIVE, new PopulationConstraint(0.05))
+                .addConstraint(ActionFilter.EpochName.TRANSITION, new PopulationConstraint(0.025))
+                .addConstraint(ActionFilter.EpochName.EXPLOITATIVE, new PopulationConstraint(0.001));
 
         agents = new ArrayList<>();
         for (int i=1; i <= currentState.districts().size(); i++) {

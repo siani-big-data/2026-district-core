@@ -2,6 +2,7 @@ package siani.districting.architecture.engine.environment.actionfiltering;
 
 import siani.districting.architecture.adjacency.AdjacencySolver;
 import siani.districting.architecture.engine.Action;
+import siani.districting.architecture.engine.environment.actionfiltering.constraints.ConstraintCommand;
 import siani.districting.architecture.model.State;
 
 import java.util.*;
@@ -9,8 +10,7 @@ import java.util.*;
 public class ActionFilter {
 
     private final Map<EpochName, Epoch> epochNameEpochMap;
-    private final HashMap<Epoch, List<ConstraintCommand>> epochFiltersMap;
-    List<ConstraintCommand> constraints = new ArrayList<>();
+    private final Map<Epoch, List<ConstraintCommand>> epochFiltersMap;
 
     public enum EpochName {
         EXPLORATIVE,
@@ -60,6 +60,7 @@ public class ActionFilter {
     public List<Action> filterActions(State state, AdjacencySolver solver, List<Action> actionList, int step) {
         Epoch epoch = getEpochFromCosine(step);
         List<ConstraintCommand> constraints = epochFiltersMap.get(epoch);
+        if (constraints == null) return actionList;
         for (ConstraintCommand constraint : constraints) {
             actionList = constraint.filter(state,solver, actionList);
         }

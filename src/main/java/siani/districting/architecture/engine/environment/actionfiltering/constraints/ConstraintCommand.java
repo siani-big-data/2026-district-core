@@ -1,4 +1,4 @@
-package siani.districting.architecture.engine.environment.actionfiltering;
+package siani.districting.architecture.engine.environment.actionfiltering.constraints;
 
 import siani.districting.architecture.adjacency.AdjacencySolver;
 import siani.districting.architecture.engine.Action;
