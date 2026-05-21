@@ -40,9 +40,9 @@ public class SimulationTest {
     @BeforeAll
     static void setUp() throws IOException {
         long start = System.currentTimeMillis();
-        manager = new SerializerManager("src/main/resources/simulationTest_store", 100);
+        manager = new SerializerManager("/home/mathi/Samba/tennessee/tennessee_store/data", 100);
 
-        partyMapping = CsvToMapReader.read("src/main/resources/candidateToPartyTennessee.csv", true);
+        partyMapping = CsvToMapReader.read("/home/mathi/Samba/tennessee/tennessee_info/candidateToPartyTennessee.csv", true);
 
         if (manager.getLastState() != null) {
             System.out.println("Estado recuperado exitosamente desde archivos.");
@@ -50,7 +50,7 @@ public class SimulationTest {
 
             table = manager.getLastContainer();
             if (table == null) table = new GuavaPrecinctInfoTable();
-            
+
             Set<String> recoveredAdjacency = manager.getLastAdjacencySet();
             if (recoveredAdjacency != null) {
                 adjacencySolver = new AdjacencySolver(currentState.precints(), recoveredAdjacency);
@@ -60,18 +60,18 @@ public class SimulationTest {
 
         } else {
             table = new GuavaPrecinctInfoTable();
-            currentState = ShapefileReader.read("src/main/resources/tn_2024_gen_prec_NUEVO/tn_2024_gen_cong_prec/tn_2024_gen_cong_prec.shp",
+            currentState = ShapefileReader.read("/home/mathi/Samba/tennessee/tennessee_info/tn_2024_gen_cong_prec/tn_2024_gen_cong_prec.shp",
                     "tennessee",
                     table,
-                    "src/main/resources/tn_2024_gen_prec_NUEVO/tn_2024_gen_cong_prec/tennessee_pop_per_cong_distr.csv");
+                    "/home/mathi/Samba/tennessee/tennessee_info/tennessee_pop_per_cong_distr.csv");
             adjacencySolver = new AdjacencySolver(currentState.precints());
             manager.serializeAll(currentState, adjacencySolver.getAdjacencySet(), table);
         }
 
-         filter = ActionFilter.create()
-                 .addConstraint(ActionFilter.EpochName.EXPLORATIVE, new PopulationConstraint(0.05))
-                 .addConstraint(ActionFilter.EpochName.TRANSITION, new PopulationConstraint(0.025))
-                 .addConstraint(ActionFilter.EpochName.EXPLOITATIVE, new PopulationConstraint(0.001));
+        filter = ActionFilter.create()
+                .addConstraint(ActionFilter.EpochName.EXPLORATIVE, new PopulationConstraint(0.05))
+                .addConstraint(ActionFilter.EpochName.TRANSITION, new PopulationConstraint(0.025))
+                .addConstraint(ActionFilter.EpochName.EXPLOITATIVE, new PopulationConstraint(0.001));
 
         agents = new ArrayList<>();
         for (int i=1; i <= currentState.districts().size(); i++) {
@@ -86,7 +86,7 @@ public class SimulationTest {
         MatrixMultiplicationBoundaryCalculator boundariesCalculator = new MatrixMultiplicationBoundaryCalculator();
         Map<Integer, Map<Integer, Set<Precinct>>> borders = boundariesCalculator.calculateBoundariesForFirstTime(currentState, adjacencySolver);
         long start;
-        int maxSteps = 100;
+        int maxSteps = 500;
         long beforeSim = System.currentTimeMillis();
         while (step < maxSteps) {
             System.out.println("Iniciando simulación step " + step++ + "...");
@@ -124,10 +124,13 @@ public class SimulationTest {
             borders = boundariesCalculator.updateMatrix(newState, differents);
             currentState = newState;
 
-            StateCsvExporter.exportWithWinnersPerDistrict(currentState,
-                    "src/main/resources/simulationTest_store/step_" + step + ".csv" ,
+            ActionFilter.EpochName currentEpochName = filter.getEpochNameFromStep(currentStep);
+
+            StateCsvExporter.exportWithWinnersPerDistrictEpochAndPopulation(currentState,
+                    "/home/mathi/Samba/tennessee/tennessee_store/csv/step_" + step + ".csv" ,
                     table,
-                    partyMapping);
+                    partyMapping,
+                    currentEpochName);
 
             System.out.println("Tiempo de step: " + (System.currentTimeMillis() - start) + " ms");
         }

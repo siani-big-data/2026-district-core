@@ -42,7 +42,7 @@ public class BoundariesCalculator {
                 .map(adjacent -> state.getPrecinctsAndDistrictsMap().get(adjacent))
                 .distinct()
                 .filter(districtId -> !Objects.equals(districtId, district.uniqueId()))
-                .forEach(districtId -> boundariesWithOtherDistrictsMap.computeIfAbsent(districtId, _ -> ConcurrentHashMap.newKeySet()).add(precinct));
+                .forEach(districtId -> boundariesWithOtherDistrictsMap.computeIfAbsent(districtId, k -> ConcurrentHashMap.newKeySet()).add(precinct));
     }
 
     private static boolean precinctIsBoundary(State state, AdjacencySolver solver, Precinct current) {

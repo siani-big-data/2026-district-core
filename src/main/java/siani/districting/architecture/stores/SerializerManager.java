@@ -88,7 +88,7 @@ public class SerializerManager {
     }
 
     private void fetchLastState(int lastIndex) throws IOException {
-        this.lastState = StateRestorer.restore(new File(path), lastIndex);
+        this.lastState = StateRestorer.restore(new File(path), lastIndex, snapshotStep);
         this.stepCount = lastIndex + 1;
         if (lastIndex % snapshotStep != 0) {
             int snapshotNumber = lastIndex / snapshotStep;

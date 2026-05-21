@@ -22,23 +22,25 @@ public class StateFactory {
                 .map(d -> new District(d.uniqueId(), new ArrayList<>(d.precinctList())))
                 .collect(Collectors.toList());
 
-        State newState = new State(state.getName(), clonedDistricts);
-        Map<Precinct, Integer> newStateMap = newState.getPrecinctsAndDistrictsMap();
+        Map<Precinct, Integer> newStateMap = clonedDistricts.stream()
+                .flatMap(district -> district.precinctList().stream()
+                        .map(precinct -> Map.entry(precinct, district.uniqueId())))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         Map<Precinct, Integer> deltaMap = delta.differencies();
 
         for (Precinct precinct : deltaMap.keySet()) {
             Integer oldDistrictId = newStateMap.get(precinct);
             Integer newDistrictId = deltaMap.get(precinct);
             if (!Objects.equals(oldDistrictId, newDistrictId)) {
-                adjustPrecinct(newState, precinct, oldDistrictId, newDistrictId);
+                adjustPrecinct(clonedDistricts, precinct, oldDistrictId, newDistrictId);
                 newStateMap.put(precinct, newDistrictId);
             }
         }
-        return newState;
+        return new State(state.getName(), clonedDistricts);
     }
 
-    private static void adjustPrecinct(State newState, Precinct precinct, Integer oldDistrictId, Integer newDistrictId) {
-        for (District district : newState.districts()) {
+    private static void adjustPrecinct(List<District> districts, Precinct precinct, Integer oldDistrictId, Integer newDistrictId) {
+        for (District district : districts) {
             if (Objects.equals(district.uniqueId(), oldDistrictId)) {
                 district.precinctList().remove(precinct);
             } else if (Objects.equals(district.uniqueId(), newDistrictId)) {

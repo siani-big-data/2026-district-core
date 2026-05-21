@@ -3,6 +3,7 @@ package siani.districting.architecture.model;
 import siani.districting.architecture.geometry.GeoShape;
 
 import java.io.Serializable;
+import java.util.Objects;
 
 public class Precinct implements Serializable {
 
@@ -30,5 +31,17 @@ public class Precinct implements Serializable {
 
     public void setPopulation(int population) {
         this.population = population;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Precinct precinct)) return false;
+        return Objects.equals(id, precinct.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }

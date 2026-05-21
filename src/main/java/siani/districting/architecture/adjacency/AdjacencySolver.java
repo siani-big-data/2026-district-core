@@ -14,6 +14,18 @@ public class AdjacencySolver {
     private GeoTree tree;
     private Set<String> adjacencySet;
 
+    private record Adjacency(String firstId, String secondId) {
+        boolean contains(String precinctId) {
+            return firstId.equals(precinctId) || secondId.equals(precinctId);
+        }
+
+        String otherId(String precinctId) {
+            if (firstId.equals(precinctId)) return secondId;
+            if (secondId.equals(precinctId)) return firstId;
+            throw new IllegalArgumentException("Precinct " + precinctId + " is not part of this adjacency.");
+        }
+    }
+    
     public AdjacencySolver(List<Precinct> precincts) {
         this.precincts = precincts;
         tree = new GeoToolsGeoTree(new STRtree());
@@ -30,19 +42,26 @@ public class AdjacencySolver {
     }
 
     public List<String> getAdjacentsIds(Precinct precinct) {
-        return adjacencySet.stream().filter(adj -> adj.contains(precinct.id())).toList();
+        return getAdjacentsIds(precinct.id());
     }
 
     public List<Precinct> getAdjacents(Precinct precinct) {
 
-        List<String> precinctsIds = adjacencySet.stream().filter(adj -> adj.contains(precinct.id())).map(
-                s -> s.replace(precinct.id(), "").replace(",", "")).toList();
+        List<String> precinctsIds = adjacencySet.stream()
+                .map(this::parseAdjacency)
+                .filter(adjacency -> adjacency.contains(precinct.id()))
+                .map(adjacency -> adjacency.otherId(precinct.id()))
+                .toList();
 
         return precincts.stream().filter(p -> precinctsIds.contains(p.id())).toList();
     }
 
     public List<String> getAdjacentsIds(String precinctId) {
-        return adjacencySet.stream().filter(adj -> adj.contains(precinctId)).toList();
+        return adjacencySet.stream()
+                .map(this::parseAdjacency)
+                .filter(adjacency -> adjacency.contains(precinctId))
+                .map(adjacency -> adjacency.otherId(precinctId))
+                .toList();
     }
 
     private void buildTree() {
@@ -92,7 +111,16 @@ public class AdjacencySolver {
                 : precinct2 + "," + precinct1;
     }
 
+    private Adjacency parseAdjacency(String adjacency) {
+        String[] ids = adjacency.split(",", 2);
+        if (ids.length != 2) {
+            throw new IllegalArgumentException("Invalid adjacency entry: " + adjacency);
+        }
+        return new Adjacency(ids[0], ids[1]);
+    }
+
     public Set<String> getAdjacencySet() {
         return adjacencySet;
     }
+
 }

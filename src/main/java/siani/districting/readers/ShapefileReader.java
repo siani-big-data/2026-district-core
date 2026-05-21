@@ -40,8 +40,8 @@ public class  ShapefileReader {
                                      PrecinctInfoContainer container,
                                      String populationCsvPath) throws IOException {
         Map<Integer, List<Precinct>> precintsMap = createPrecincts(store, container);
+        assignPopulation(precintsMap, populationCsvPath);
         List<District> districtsList = buildDistricts(precintsMap);
-        assignPopulation(districtsList, populationCsvPath);
         return new State(name, districtsList);
     }
 
@@ -54,17 +54,19 @@ public class  ShapefileReader {
         return districtsList;
     }
 
-    private static void assignPopulation(List<District> districts, String populationCsvPath) throws IOException {
+    private static void assignPopulation(Map<Integer, List<Precinct>> precinctsMap, String populationCsvPath) throws IOException {
         Map<Object, Object> districtPopulationMap = CsvToMapReader.read(populationCsvPath, true);
-        for (District district: districts){
+        for (Map.Entry<Integer, List<Precinct>> entry : precinctsMap.entrySet()){
+            Integer districtId = entry.getKey();
+            List<Precinct> precincts = entry.getValue();
             List<Integer> population = PopulationGenerator.generatePopulationPerPrecinct(
-                    district.precinctList().size(),
-                    (Integer) districtPopulationMap.get(district.uniqueId()),
-                    district.uniqueId()
+                    precincts.size(),
+                    (Integer) districtPopulationMap.get(districtId),
+                    districtId
             );
 
-            for (int i = 0; i < district.precinctList().size(); i++) {
-                district.precinctList().get(i).setPopulation(population.get(i));
+            for (int i = 0; i < precincts.size(); i++) {
+                precincts.get(i).setPopulation(population.get(i));
             }
         }
     }

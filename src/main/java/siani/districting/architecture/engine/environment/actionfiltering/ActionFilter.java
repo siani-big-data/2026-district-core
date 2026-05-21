@@ -11,6 +11,7 @@ public class ActionFilter {
 
     private final Map<EpochName, Epoch> epochNameEpochMap;
     private final Map<Epoch, List<ConstraintCommand>> epochFiltersMap;
+    private double epochLengthFactor = 50;
 
     public enum EpochName {
         EXPLORATIVE,
@@ -35,8 +36,8 @@ public class ActionFilter {
 
     private ActionFilter() {
         this.epochNameEpochMap = Map.of(
-                EpochName.EXPLORATIVE, new Epoch(-1.0, -0.33),
-                EpochName.TRANSITION, new Epoch(-0.34, 0.33),
+                EpochName.EXPLORATIVE, new Epoch(-1.0, -0.34),
+                EpochName.TRANSITION, new Epoch(-0.33, 0.33),
                 EpochName.EXPLOITATIVE, new Epoch(0.34, 1)
         );
         this.epochFiltersMap = new HashMap<>();
@@ -52,14 +53,25 @@ public class ActionFilter {
         return this;
     }
 
+    public ActionFilter epochLengthFactor(double factor) {
+        this.epochLengthFactor = factor;
+        return this;
+    }
+
+    public double getEpochLengthFactor() {
+        return this.epochLengthFactor;
+    }
+
     private List<ConstraintCommand> getContraintsList(EpochName name) {
         Epoch epoch = epochNameEpochMap.get(name);
         return epochFiltersMap.computeIfAbsent(epoch, k -> new ArrayList<>());
     }
 
+
     public List<Action> filterActions(State state, AdjacencySolver solver, List<Action> actionList, int step) {
-        Epoch epoch = getEpochFromCosine(step);
-        List<ConstraintCommand> constraints = epochFiltersMap.get(epoch);
+        EpochName epochName = getEpochNameFromStep(step);
+        Epoch epoch = epochName != null ? epochNameEpochMap.get(epochName) : null;
+        List<ConstraintCommand> constraints = epoch != null ? epochFiltersMap.get(epoch) : null;
         if (constraints == null) return actionList;
         for (ConstraintCommand constraint : constraints) {
             actionList = constraint.filter(state,solver, actionList);
@@ -67,11 +79,14 @@ public class ActionFilter {
         return actionList;
     }
 
-    private Epoch getEpochFromCosine(int step) {
-        double cos = Math.cos(step);
+    private double cosineForStep(int step) {
+        return Math.round((Math.cos(step / epochLengthFactor) * 100d)) / 100d;
+    }
+
+    public EpochName getEpochNameFromStep(int step) {
         for (Map.Entry<EpochName, Epoch> entry : epochNameEpochMap.entrySet()) {
-            if (entry.getValue().contains(cos)) {
-                return entry.getValue();
+            if (entry.getValue().contains(cosineForStep(step))) {
+                return entry.getKey();
             }
         }
         return null;
