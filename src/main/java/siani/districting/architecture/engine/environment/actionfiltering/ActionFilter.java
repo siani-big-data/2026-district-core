@@ -9,22 +9,22 @@ import java.util.*;
 
 public class ActionFilter {
 
-    private final Map<EpochName, Epoch> epochNameEpochMap;
-    private final Map<Epoch, List<ConstraintCommand>> epochFiltersMap;
-    private double epochLengthFactor = 50;
+    private final Map<PhaseName, Phase> PhaseNamePhaseMap;
+    private final Map<Phase, List<ConstraintCommand>> PhaseFiltersMap;
+    private double phaseLengthFactor = 50;
 
-    public enum EpochName {
+    public enum PhaseName {
         EXPLORATIVE,
         TRANSITION,
         EXPLOITATIVE
     }
 
-    public static class Epoch {
+    public static class Phase {
 
         private final double start;
         private final double end;
 
-        public Epoch(double start, double end) {
+        public Phase(double start, double end) {
             this.start = start;
             this.end = end;
         }
@@ -35,43 +35,43 @@ public class ActionFilter {
     }
 
     private ActionFilter() {
-        this.epochNameEpochMap = Map.of(
-                EpochName.EXPLORATIVE, new Epoch(-1.0, -0.34),
-                EpochName.TRANSITION, new Epoch(-0.33, 0.33),
-                EpochName.EXPLOITATIVE, new Epoch(0.34, 1)
+        this.PhaseNamePhaseMap = Map.of(
+                PhaseName.EXPLORATIVE, new Phase(-1.0, -0.34),
+                PhaseName.TRANSITION, new Phase(-0.33, 0.33),
+                PhaseName.EXPLOITATIVE, new Phase(0.34, 1)
         );
-        this.epochFiltersMap = new HashMap<>();
+        this.PhaseFiltersMap = new HashMap<>();
     }
 
     public static ActionFilter create() {
         return new ActionFilter();
     }
 
-    public ActionFilter addConstraint(EpochName name, ConstraintCommand constraint) {
+    public ActionFilter addConstraint(PhaseName name, ConstraintCommand constraint) {
         List<ConstraintCommand> list = getContraintsList(name);
         list.add(constraint);
         return this;
     }
 
-    public ActionFilter epochLengthFactor(double factor) {
-        this.epochLengthFactor = factor;
+    public ActionFilter phaseLengthFactor(double factor) {
+        this.phaseLengthFactor = factor;
         return this;
     }
 
-    public double getEpochLengthFactor() {
-        return this.epochLengthFactor;
+    public double getPhaseLengthFactor() {
+        return this.phaseLengthFactor;
     }
 
-    private List<ConstraintCommand> getContraintsList(EpochName name) {
-        Epoch epoch = epochNameEpochMap.get(name);
-        return epochFiltersMap.computeIfAbsent(epoch, k -> new ArrayList<>());
+    private List<ConstraintCommand> getContraintsList(PhaseName name) {
+        Phase Phase = PhaseNamePhaseMap.get(name);
+        return PhaseFiltersMap.computeIfAbsent(Phase, k -> new ArrayList<>());
     }
 
 
     public List<Action> filterActions(State state, AdjacencySolver solver, List<Action> actionList, int step) {
-        EpochName epochName = getEpochNameFromStep(step);
-        Epoch epoch = epochName != null ? epochNameEpochMap.get(epochName) : null;
-        List<ConstraintCommand> constraints = epoch != null ? epochFiltersMap.get(epoch) : null;
+        PhaseName PhaseName = getPhaseNameFromStep(step);
+        Phase Phase = PhaseName != null ? PhaseNamePhaseMap.get(PhaseName) : null;
+        List<ConstraintCommand> constraints = Phase != null ? PhaseFiltersMap.get(Phase) : null;
         if (constraints == null) return actionList;
         for (ConstraintCommand constraint : constraints) {
             actionList = constraint.filter(state,solver, actionList);
@@ -80,11 +80,11 @@ public class ActionFilter {
     }
 
     private double cosineForStep(int step) {
-        return Math.round((Math.cos(step / epochLengthFactor) * 100d)) / 100d;
+        return Math.round((Math.cos(step / phaseLengthFactor) * 100d)) / 100d;
     }
 
-    public EpochName getEpochNameFromStep(int step) {
-        for (Map.Entry<EpochName, Epoch> entry : epochNameEpochMap.entrySet()) {
+    public PhaseName getPhaseNameFromStep(int step) {
+        for (Map.Entry<PhaseName, Phase> entry : PhaseNamePhaseMap.entrySet()) {
             if (entry.getValue().contains(cosineForStep(step))) {
                 return entry.getKey();
             }

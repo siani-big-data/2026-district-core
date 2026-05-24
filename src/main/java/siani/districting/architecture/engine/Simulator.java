@@ -21,61 +21,61 @@ import java.util.Map;
 public class Simulator {
 
     private static final int SNAPSHOT_STEP = 50;
-    private static final int TEXAS_STEPS_TO_RUN = 650;
+    private static final int STEPS_TO_RUN = 650;
 
-    private static final String TEXAS_STORE_PATH = "/home/mathi/Samba/texas/texas_store/dat";
-    private static final String TEXAS_CSV_OUTPUT_PATH = "/home/mathi/Samba/texas/texas_store/csv";
-    private static final String TEXAS_PARTY_MAPPING_PATH =
-            "/home/mathi/Samba/texas/texas_info/tx_2024_gen_tx_vtd/candidateToPartyTexas.csv";
-    private static final String TEXAS_SHAPEFILE_PATH =
-            "/home/mathi/Samba/texas/texas_info/tx_2024_gen_tx_vtd/tx_2024_gen_cong_tx_vtd/tx_2024_gen_cong_tx_vtd.shp";
-    private static final String TEXAS_POPULATION_PATH =
-            "/home/mathi/Samba/texas/texas_info/tx_2024_gen_tx_vtd/populationPerDistrictTexas24.csv";
+    private static final String STORE_PATH = "/home/mathi/Samba/tennessee/tennessee_store/dat";
+    private static final String CSV_OUTPUT_PATH = "/home/mathi/Samba/tennessee/tennessee_store/csv";
+    private static final String PARTY_MAPPING_PATH =
+            "/home/mathi/Samba/tennessee/tennessee_info/candidateToPartyTennessee.csv";
+    private static final String SHAPEFILE_PATH =
+            "/home/mathi/Samba/tennessee/tennessee_info/tn_2024_gen_cong_prec/tn_2024_gen_cong_prec.shp";
+    private static final String POPULATION_PATH =
+            "/home/mathi/Samba/tennessee/tennessee_info/tennessee_pop_per_cong_distr.csv";
 
     public static void main(String[] args) throws IOException {
         long start = System.currentTimeMillis();
-        Engine engine = createTexasEngine();
+        Engine engine = createtennesseeEngine();
 
-        System.out.println("Starting Texas engine example at step " + engine.currentStep());
-        Engine.RunResult result = engine.runSteps(TEXAS_STEPS_TO_RUN);
+        System.out.println("Starting tennessee engine example at step " + engine.currentStep());
+        Engine.RunResult result = engine.runSteps(STEPS_TO_RUN);
 
-        System.out.println("Texas engine example finished.");
-        System.out.println("Initial run size: " + TEXAS_STEPS_TO_RUN + " steps");
+        System.out.println("tennessee engine example finished.");
+        System.out.println("Initial run size: " + STEPS_TO_RUN + " steps");
         System.out.println("Final step: " + result.finalStep());
         System.out.println("District count: " + result.finalState().districts().size());
         System.out.println("Total elapsed time: " + (System.currentTimeMillis() - start) + " ms");
     }
 
-    public static Engine createTexasEngine() throws IOException {
-        SerializerManager manager = new SerializerManager(TEXAS_STORE_PATH, SNAPSHOT_STEP);
-        Map<Object, Object> partyMapping = CsvToMapReader.read(TEXAS_PARTY_MAPPING_PATH, true);
+    public static Engine createtennesseeEngine() throws IOException {
+        SerializerManager manager = new SerializerManager(STORE_PATH, SNAPSHOT_STEP);
+        Map<Object, Object> partyMapping = CsvToMapReader.read(PARTY_MAPPING_PATH, true);
 
         PrecinctInfoContainer table;
         State currentState;
         AdjacencySolver adjacencySolver;
 
         if (manager.getLastState() != null) {
-            System.out.println("Recovered Texas state from " + TEXAS_STORE_PATH);
+            System.out.println("Recovered tennessee state from " + STORE_PATH);
             currentState = manager.getLastState();
             table = manager.getLastContainer();
             adjacencySolver = new AdjacencySolver(currentState.precints(), manager.getLastAdjacencySet());
         } else {
-            System.out.println("No Texas state found. Reading shapefile and building initial store.");
+            System.out.println("No tennessee state found. Reading shapefile and building initial store.");
             table = new GuavaPrecinctInfoTable();
             currentState = ShapefileReader.read(
-                    TEXAS_SHAPEFILE_PATH,
-                    "Texas",
+                    SHAPEFILE_PATH,
+                    "tennessee",
                     table,
-                    TEXAS_POPULATION_PATH
+                    POPULATION_PATH
             );
             adjacencySolver = new AdjacencySolver(currentState.precints());
             manager.serializeAll(currentState, adjacencySolver.getAdjacencySet(), table);
         }
 
         ActionFilter filter = ActionFilter.create()
-                .addConstraint(ActionFilter.EpochName.EXPLORATIVE, new PopulationConstraint(0.05))
-                .addConstraint(ActionFilter.EpochName.TRANSITION, new PopulationConstraint(0.025))
-                .addConstraint(ActionFilter.EpochName.EXPLOITATIVE, new PopulationConstraint(0.001));
+                .addConstraint(ActionFilter.PhaseName.EXPLORATIVE, new PopulationConstraint(0.05))
+                .addConstraint(ActionFilter.PhaseName.TRANSITION, new PopulationConstraint(0.025))
+                .addConstraint(ActionFilter.PhaseName.EXPLOITATIVE, new PopulationConstraint(0.001));
 
         List<Agent> agents = createRandomAgents(currentState);
 
@@ -85,7 +85,7 @@ public class Simulator {
                 .agents(agents)
                 .actionFilter(filter)
                 .serializerManager(manager)
-                .initialStep(manager.getStepCount())
+                .initialStep(manager.getStepCount() - 1)
                 .stepListener(result -> {
                     exportStepCsv(result, table, partyMapping);
                     printStepSummary(result);
@@ -104,25 +104,25 @@ public class Simulator {
     private static void exportStepCsv(Engine.StepResult result,
                                       PrecinctInfoContainer table,
                                       Map<Object, Object> partyMapping) throws IOException {
-        File outputDirectory = new File(TEXAS_CSV_OUTPUT_PATH);
+        File outputDirectory = new File(CSV_OUTPUT_PATH);
         if (!outputDirectory.exists() && !outputDirectory.mkdirs()) {
             throw new IOException("Could not create csv output directory: " + outputDirectory);
         }
 
         String outputPath = new File(outputDirectory, "step_" + result.step() + ".csv").getAbsolutePath();
-        StateCsvExporter.exportWithWinnersPerDistrictEpochAndPopulation(
+        StateCsvExporter.exportWithWinnersPerDistrictPhaseAndPopulation(
                 result.state(),
                 outputPath,
                 table,
                 partyMapping,
-                result.epochName()
+                result.PhaseName()
         );
     }
 
     private static void printStepSummary(Engine.StepResult result) {
         System.out.println(
                 "Step " + result.step()
-                        + " | epoch=" + result.epochName()
+                        + " | Phase=" + result.PhaseName()
                         + " | selected=" + result.selectedActions()
                         + " | applied=" + result.appliedActions()
                         + " | changedPrecincts=" + result.changedPrecincts()

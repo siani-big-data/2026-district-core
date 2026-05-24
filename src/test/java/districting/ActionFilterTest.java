@@ -9,11 +9,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 public class ActionFilterTest {
 
     @Test
-    void shouldMapCosineToAnEpochWithoutGaps() {
-        ActionFilter filter = ActionFilter.create().epochLengthFactor(50);
+    void shouldMapCosineToAnphaseWithoutGaps() {
+        ActionFilter filter = ActionFilter.create().phaseLengthFactor(50);
 
-        assertEquals(ActionFilter.EpochName.EXPLOITATIVE, filter.getEpochNameFromStep(567));
-        assertEquals(ActionFilter.EpochName.EXPLORATIVE, filter.getEpochNameFromStep(410));
+        assertEquals(ActionFilter.PhaseName.EXPLOITATIVE, filter.getPhaseNameFromStep(567));
+        assertEquals(ActionFilter.PhaseName.EXPLORATIVE, filter.getPhaseNameFromStep(410));
     }
 
     @Test
@@ -21,7 +21,7 @@ public class ActionFilterTest {
         ActionFilter filter = ActionFilter.create();
 
         for (int step = 0; step < 1000; step++) {
-            assertNotNull(filter.getEpochNameFromStep(step), "step " + step + " produced null epoch");
+            assertNotNull(filter.getPhaseNameFromStep(step), "step " + step + " produced null phase");
         }
     }
 }

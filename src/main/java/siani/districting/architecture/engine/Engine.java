@@ -35,24 +35,18 @@ public class Engine {
     private int currentStep;
     private boolean chooseActionsInParallel;
 
-    public Engine() {
-        this.agents = Collections.emptyList();
-        this.boundariesCalculator = new MatrixMultiplicationBoundaryCalculator();
-        this.chooseActionsInParallel = true;
-    }
-
-    private Engine(Builder builder) {
-        this.currentState = Objects.requireNonNull(builder.initialState, "initialState is required");
-        this.adjacencySolver = Objects.requireNonNull(builder.adjacencySolver, "adjacencySolver is required");
-        this.agents = List.copyOf(Objects.requireNonNull(builder.agents, "agents are required"));
-        this.actionFilter = builder.actionFilter;
-        this.boundariesCalculator = builder.boundariesCalculator;
-        this.serializerManager = builder.serializerManager;
-        this.stepListener = builder.stepListener;
-        this.chooseActionsInParallel = builder.chooseActionsInParallel;
-        this.currentStep = builder.initialStep != null
-                ? builder.initialStep
-                : serializerStepOrZero(builder.serializerManager);
+    private Engine(State initialState, AdjacencySolver adjacencySolver, List<Agent> agents, ActionFilter actionFilter, MatrixMultiplicationBoundaryCalculator boundariesCalculator, SerializerManager serializerManager, StepListener stepListener, Integer initialStep, boolean chooseActionsInParallel) {
+        this.currentState = Objects.requireNonNull(initialState, "initialState is required");
+        this.adjacencySolver = Objects.requireNonNull(adjacencySolver, "adjacencySolver is required");
+        this.agents = List.copyOf(Objects.requireNonNull(agents, "agents are required"));
+        this.actionFilter = actionFilter != null ? actionFilter : ActionFilter.create();
+        this.boundariesCalculator = boundariesCalculator != null ? boundariesCalculator : new MatrixMultiplicationBoundaryCalculator();
+        this.serializerManager = Objects.requireNonNull(serializerManager, "SerializerManager is required");
+        this.stepListener = stepListener != null ? stepListener : result -> {};
+        this.chooseActionsInParallel = chooseActionsInParallel;
+        this.currentStep = initialStep != null
+                ? initialStep
+                : serializerLastExecutedStepOrMinusOne(serializerManager);
     }
 
     public static Builder builder() {
@@ -116,8 +110,8 @@ public class Engine {
         currentState = newState;
         currentStep = stepNumber;
 
-        ActionFilter.EpochName epochName = actionFilter != null
-                ? actionFilter.getEpochNameFromStep(stepNumber)
+        ActionFilter.PhaseName PhaseName = actionFilter != null
+                ? actionFilter.getPhaseNameFromStep(stepNumber)
                 : null;
 
         StepResult result = new StepResult(
@@ -125,7 +119,7 @@ public class Engine {
                 selectedActions.size(),
                 finalActions.size(),
                 changedPrecincts.size(),
-                epochName,
+                PhaseName,
                 System.currentTimeMillis() - start,
                 currentState,
                 delta
@@ -134,7 +128,6 @@ public class Engine {
         if (stepListener != null) {
             stepListener.onStep(result);
         }
-
         return result;
     }
 
@@ -194,8 +187,8 @@ public class Engine {
         }
     }
 
-    private static int serializerStepOrZero(SerializerManager serializerManager) {
-        return serializerManager == null ? 0 : serializerManager.getStepCount();
+    private static int serializerLastExecutedStepOrMinusOne(SerializerManager serializerManager) {
+        return serializerManager == null ? -1 : serializerManager.getStepCount() - 1;
     }
 
     public static class Builder {
@@ -213,16 +206,25 @@ public class Engine {
         }
 
         public Builder initialState(State initialState) {
+            if (initialState == null) {
+                throw new IllegalArgumentException("initialState is required");
+            }
             this.initialState = initialState;
             return this;
         }
 
         public Builder adjacencySolver(AdjacencySolver adjacencySolver) {
+            if (adjacencySolver == null) {
+                throw new IllegalArgumentException("adjacencySolver is required");
+            }
             this.adjacencySolver = adjacencySolver;
             return this;
         }
 
         public Builder agents(List<Agent> agents) {
+            if (agents == null || agents.isEmpty()) {
+                throw new IllegalArgumentException("agents are required");
+            }
             this.agents = agents;
             return this;
         }
@@ -238,6 +240,9 @@ public class Engine {
         }
 
         public Builder serializerManager(SerializerManager serializerManager) {
+            if (serializerManager == null) {
+                throw new IllegalArgumentException("serializerManager is required");
+            }
             this.serializerManager = serializerManager;
             return this;
         }
@@ -248,8 +253,8 @@ public class Engine {
         }
 
         public Builder initialStep(int initialStep) {
-            if (initialStep < 0) {
-                throw new IllegalArgumentException("initialStep must be >= 0");
+            if (initialStep < -1) {
+                throw new IllegalArgumentException("initialStep must be >= -1");
             }
             this.initialStep = initialStep;
             return this;
@@ -261,7 +266,16 @@ public class Engine {
         }
 
         public Engine build() {
-            return new Engine(this);
+            return new Engine(this.initialState,
+                    this.adjacencySolver,
+                    this.agents,
+                    this.actionFilter,
+                    this.boundariesCalculator,
+                    this.serializerManager,
+                    this.stepListener,
+                    this.initialStep,
+                    this.chooseActionsInParallel
+            );
         }
     }
 
@@ -274,7 +288,7 @@ public class Engine {
                              int selectedActions,
                              int appliedActions,
                              int changedPrecincts,
-                             ActionFilter.EpochName epochName,
+                             ActionFilter.PhaseName PhaseName,
                              long elapsedMillis,
                              State state,
                              StateDelta delta) {

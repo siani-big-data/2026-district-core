@@ -36,16 +36,16 @@ public class StateCsvExporterTest {
         ));
 
         Path output = tempDir.resolve("step.csv");
-        StateCsvExporter.exportWithWinnersPerDistrictEpochAndPopulation(
+        StateCsvExporter.exportWithWinnersPerDistrictPhaseAndPopulation(
                 state,
                 output.toString(),
                 new GuavaPrecinctInfoTable(),
                 Map.of(),
-                ActionFilter.EpochName.TRANSITION
+                ActionFilter.PhaseName.TRANSITION
         );
 
         List<String> lines = Files.readAllLines(output);
-        assertEquals("precinct_id,district_id,election_winner,epoch,district_population", lines.get(0));
+        assertEquals("precinct_id,district_id,election_winner,Phase,district_population", lines.get(0));
         assertEquals(4, lines.size());
         assertEquals(1, lines.stream().filter(line -> line.equals("A,1,UNKNOWN,TRANSITION,200")).count());
         assertEquals(1, lines.stream().filter(line -> line.equals("B,1,UNKNOWN,TRANSITION,200")).count());
@@ -53,7 +53,7 @@ public class StateCsvExporterTest {
     }
 
     @Test
-    void shouldExportDistrictPopulationWithoutEpoch() throws IOException {
+    void shouldExportDistrictPopulationWithoutPhase() throws IOException {
         Precinct precinctA = precinct("A", 120);
         Precinct precinctB = precinct("B", 80);
 
@@ -61,7 +61,7 @@ public class StateCsvExporterTest {
                 new District(1, List.of(precinctA, precinctB))
         ));
 
-        Path output = tempDir.resolve("step-no-epoch.csv");
+        Path output = tempDir.resolve("step-no-Phase.csv");
         StateCsvExporter.exportWithWinnersPerDistrictAndPopulation(
                 state,
                 output.toString(),

@@ -69,9 +69,9 @@ public class SimulationTest {
         }
 
         filter = ActionFilter.create()
-                .addConstraint(ActionFilter.EpochName.EXPLORATIVE, new PopulationConstraint(0.05))
-                .addConstraint(ActionFilter.EpochName.TRANSITION, new PopulationConstraint(0.025))
-                .addConstraint(ActionFilter.EpochName.EXPLOITATIVE, new PopulationConstraint(0.001));
+                .addConstraint(ActionFilter.PhaseName.EXPLORATIVE, new PopulationConstraint(0.05))
+                .addConstraint(ActionFilter.PhaseName.TRANSITION, new PopulationConstraint(0.025))
+                .addConstraint(ActionFilter.PhaseName.EXPLOITATIVE, new PopulationConstraint(0.001));
 
         agents = new ArrayList<>();
         for (int i=1; i <= currentState.districts().size(); i++) {
@@ -124,13 +124,13 @@ public class SimulationTest {
             borders = boundariesCalculator.updateMatrix(newState, differents);
             currentState = newState;
 
-            ActionFilter.EpochName currentEpochName = filter.getEpochNameFromStep(currentStep);
+            ActionFilter.PhaseName currentPhaseName = filter.getPhaseNameFromStep(currentStep);
 
-            StateCsvExporter.exportWithWinnersPerDistrictEpochAndPopulation(currentState,
+            StateCsvExporter.exportWithWinnersPerDistrictPhaseAndPopulation(currentState,
                     "/home/mathi/Samba/tennessee/tennessee_store/csv/step_" + step + ".csv" ,
                     table,
                     partyMapping,
-                    currentEpochName);
+                    currentPhaseName);
 
             System.out.println("Tiempo de step: " + (System.currentTimeMillis() - start) + " ms");
         }
