@@ -8,7 +8,7 @@ import siani.districting.architecture.engine.Agent;
 import siani.districting.architecture.engine.actions.BuyAction;
 import siani.districting.architecture.engine.agents.RandomAgent;
 import siani.districting.architecture.engine.environment.IslandDetector;
-import siani.districting.architecture.engine.environment.MatrixMultiplicationBoundaryCalculator;
+import siani.districting.architecture.engine.environment.MatrixBoundaryCalculator;
 import siani.districting.architecture.engine.environment.StateFactory;
 import siani.districting.architecture.engine.environment.actionfiltering.ActionFilter;
 import siani.districting.architecture.engine.environment.actionfiltering.constraints.PopulationConstraint;
@@ -72,9 +72,9 @@ public class TexasTest {
         }
 
         filter = ActionFilter.create()
-                .addConstraint(ActionFilter.EpochName.EXPLORATIVE, new PopulationConstraint(0.05))
-                .addConstraint(ActionFilter.EpochName.TRANSITION, new PopulationConstraint(0.025))
-                .addConstraint(ActionFilter.EpochName.EXPLOITATIVE, new PopulationConstraint(0.001));
+                .addConstraint(ActionFilter.PhaseName.EXPLORATIVE, new PopulationConstraint(0.05))
+                .addConstraint(ActionFilter.PhaseName.TRANSITION, new PopulationConstraint(0.025))
+                .addConstraint(ActionFilter.PhaseName.EXPLOITATIVE, new PopulationConstraint(0.001));
 
         agents = new ArrayList<>();
         for (int i=1; i <= currentState.districts().size(); i++) {
@@ -86,7 +86,7 @@ public class TexasTest {
     @Test
     void simulationTest() throws IOException {
         int step = manager.getStepCount();
-        MatrixMultiplicationBoundaryCalculator boundariesCalculator = new MatrixMultiplicationBoundaryCalculator();
+        MatrixBoundaryCalculator boundariesCalculator = new MatrixBoundaryCalculator();
 
         System.out.println("Calculating initial boundaries...");
         long initStart = System.currentTimeMillis();

@@ -3,7 +3,7 @@ package siani.districting.architecture.engine;
 import siani.districting.architecture.adjacency.AdjacencySolver;
 import siani.districting.architecture.engine.actions.BuyAction;
 import siani.districting.architecture.engine.environment.IslandDetector;
-import siani.districting.architecture.engine.environment.MatrixMultiplicationBoundaryCalculator;
+import siani.districting.architecture.engine.environment.MatrixBoundaryCalculator;
 import siani.districting.architecture.engine.environment.StateFactory;
 import siani.districting.architecture.engine.environment.actionfiltering.ActionFilter;
 import siani.districting.architecture.model.Precinct;
@@ -28,25 +28,32 @@ public class Engine {
     private AdjacencySolver adjacencySolver;
     private List<Agent> agents;
     private ActionFilter actionFilter;
-    private MatrixMultiplicationBoundaryCalculator boundariesCalculator;
+    private MatrixBoundaryCalculator boundariesCalculator;
     private Map<Integer, Map<Integer, Set<Precinct>>> borders;
     private SerializerManager serializerManager;
     private StepListener stepListener;
     private int currentStep;
     private boolean chooseActionsInParallel;
 
-    private Engine(State initialState, AdjacencySolver adjacencySolver, List<Agent> agents, ActionFilter actionFilter, MatrixMultiplicationBoundaryCalculator boundariesCalculator, SerializerManager serializerManager, StepListener stepListener, Integer initialStep, boolean chooseActionsInParallel) {
+    private Engine(State initialState,
+                   AdjacencySolver adjacencySolver,
+                   List<Agent> agents,
+                   ActionFilter actionFilter,
+                   SerializerManager serializerManager,
+                   StepListener stepListener,
+                   Integer initialStep,
+                   boolean chooseActionsInParallel) {
         this.currentState = Objects.requireNonNull(initialState, "initialState is required");
         this.adjacencySolver = Objects.requireNonNull(adjacencySolver, "adjacencySolver is required");
         this.agents = List.copyOf(Objects.requireNonNull(agents, "agents are required"));
         this.actionFilter = actionFilter != null ? actionFilter : ActionFilter.create();
-        this.boundariesCalculator = boundariesCalculator != null ? boundariesCalculator : new MatrixMultiplicationBoundaryCalculator();
+        this.boundariesCalculator =  new MatrixBoundaryCalculator();
         this.serializerManager = Objects.requireNonNull(serializerManager, "SerializerManager is required");
         this.stepListener = stepListener != null ? stepListener : result -> {};
         this.chooseActionsInParallel = chooseActionsInParallel;
         this.currentStep = initialStep != null
                 ? initialStep
-                : serializerLastExecutedStepOrMinusOne(serializerManager);
+                : serializerManager.getStepCount();
     }
 
     public static Builder builder() {
@@ -94,7 +101,7 @@ public class Engine {
         ensureReadyToRun();
         ensureBoundariesCalculated();
 
-        int stepNumber = currentStep + 1;
+        int stepNumber = currentStep;
         long start = System.currentTimeMillis();
         List<Action> selectedActions = chooseActions(stepNumber);
         List<Action> finalActions = IslandDetector.findIslands(currentState, adjacencySolver, selectedActions);
@@ -108,7 +115,7 @@ public class Engine {
         Set<Precinct> changedPrecincts = delta.differencies().keySet();
         borders = boundariesCalculator.updateMatrix(newState, changedPrecincts);
         currentState = newState;
-        currentStep = stepNumber;
+        currentStep = stepNumber + 1;
 
         ActionFilter.PhaseName PhaseName = actionFilter != null
                 ? actionFilter.getPhaseNameFromStep(stepNumber)
@@ -187,16 +194,12 @@ public class Engine {
         }
     }
 
-    private static int serializerLastExecutedStepOrMinusOne(SerializerManager serializerManager) {
-        return serializerManager == null ? -1 : serializerManager.getStepCount() - 1;
-    }
-
     public static class Builder {
         private State initialState;
         private AdjacencySolver adjacencySolver;
         private List<Agent> agents = Collections.emptyList();
         private ActionFilter actionFilter;
-        private MatrixMultiplicationBoundaryCalculator boundariesCalculator = new MatrixMultiplicationBoundaryCalculator();
+        private MatrixBoundaryCalculator boundariesCalculator = new MatrixBoundaryCalculator();
         private SerializerManager serializerManager;
         private StepListener stepListener;
         private Integer initialStep;
@@ -234,11 +237,6 @@ public class Engine {
             return this;
         }
 
-        public Builder boundariesCalculator(MatrixMultiplicationBoundaryCalculator boundariesCalculator) {
-            this.boundariesCalculator = Objects.requireNonNull(boundariesCalculator);
-            return this;
-        }
-
         public Builder serializerManager(SerializerManager serializerManager) {
             if (serializerManager == null) {
                 throw new IllegalArgumentException("serializerManager is required");
@@ -253,8 +251,8 @@ public class Engine {
         }
 
         public Builder initialStep(int initialStep) {
-            if (initialStep < -1) {
-                throw new IllegalArgumentException("initialStep must be >= -1");
+            if (initialStep < 0) {
+                throw new IllegalArgumentException("initialStep must be >= 0");
             }
             this.initialStep = initialStep;
             return this;
@@ -270,7 +268,6 @@ public class Engine {
                     this.adjacencySolver,
                     this.agents,
                     this.actionFilter,
-                    this.boundariesCalculator,
                     this.serializerManager,
                     this.stepListener,
                     this.initialStep,

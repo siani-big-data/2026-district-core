@@ -73,21 +73,15 @@ public class AdjacencySolver {
     }
 
     private void calculateAdjacency() {
-
         precincts.parallelStream().forEach(precinct -> {
-
             List<Precinct> candidates = (List<Precinct>) tree.query(precinct.boundaries().getBoundingBox());
 
             for (Precinct candidate : candidates) {
-
                 if (candidate.equals(precinct)) continue;
-
                 if (precinctsIntersects(precinct, candidate)) adjacencySet.add( sortIds(precinct, candidate) );
-
             }
 
         });
-
     }
 
     private boolean precinctsIntersects(Precinct precinct, Precinct candidate) {

@@ -8,7 +8,7 @@ import siani.districting.architecture.engine.Agent;
 import siani.districting.architecture.engine.actions.BuyAction;
 import siani.districting.architecture.engine.agents.RandomAgent;
 import siani.districting.architecture.engine.environment.IslandDetector;
-import siani.districting.architecture.engine.environment.MatrixMultiplicationBoundaryCalculator;
+import siani.districting.architecture.engine.environment.MatrixBoundaryCalculator;
 import siani.districting.architecture.engine.environment.StateFactory;
 import siani.districting.architecture.engine.environment.actionfiltering.ActionFilter;
 import siani.districting.architecture.engine.environment.actionfiltering.constraints.PopulationConstraint;
@@ -83,7 +83,7 @@ public class SimulationTest {
     @Test
     void simulationTest() throws IOException {
         int step = manager.getStepCount();
-        MatrixMultiplicationBoundaryCalculator boundariesCalculator = new MatrixMultiplicationBoundaryCalculator();
+        MatrixBoundaryCalculator boundariesCalculator = new MatrixBoundaryCalculator();
         Map<Integer, Map<Integer, Set<Precinct>>> borders = boundariesCalculator.calculateBoundariesForFirstTime(currentState, adjacencySolver);
         long start;
         int maxSteps = 500;

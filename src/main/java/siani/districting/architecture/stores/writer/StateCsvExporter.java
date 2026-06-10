@@ -77,7 +77,7 @@ public class StateCsvExporter {
         Map<Integer, String> winners = ElectionCalculator.calculateWinnersPerDistrict(state, container, candidateToPartyMap);
         Map<Integer, Integer> districtPopulations = calculateDistrictPopulations(state);
         try (PrintWriter writer = new PrintWriter(new FileWriter(path))) {
-            writer.println("precinct_id,district_id,election_winner,Phase,district_population");
+            writer.println("precinct_id,district_id,election_winner,phase,district_population");
             String PhaseStr = PhaseName != null ? PhaseName.name() : "UNKNOWN";
             for (Map.Entry<Precinct, Integer> entry : state.getPrecinctsAndDistrictsMap().entrySet()) {
                 Integer districtId = entry.getValue();

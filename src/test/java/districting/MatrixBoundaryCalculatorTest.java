@@ -3,7 +3,7 @@ package districting;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import siani.districting.architecture.adjacency.AdjacencySolver;
-import siani.districting.architecture.engine.environment.MatrixMultiplicationBoundaryCalculator;
+import siani.districting.architecture.engine.environment.MatrixBoundaryCalculator;
 import siani.districting.architecture.model.District;
 import siani.districting.architecture.model.Precinct;
 import siani.districting.architecture.model.State;
@@ -22,7 +22,7 @@ public class MatrixBoundaryCalculatorTest {
     // Hacemos las variables estáticas para poder cargarlas una sola vez
     static State state;
     static AdjacencySolver solver;
-    static MatrixMultiplicationBoundaryCalculator boundaryCalculator;
+    static MatrixBoundaryCalculator boundaryCalculator;
     static Map<Integer, Map<Integer, Set<Precinct>>> borders;
 
     // @BeforeAll se ejecuta UNA SOLA VEZ antes de que corran los tests
@@ -41,7 +41,7 @@ public class MatrixBoundaryCalculatorTest {
         System.out.println("✅ Adyacencias calculadas en: " + (System.currentTimeMillis() - start) + " ms");
 
         start = System.currentTimeMillis();
-        boundaryCalculator = new MatrixMultiplicationBoundaryCalculator();
+        boundaryCalculator = new MatrixBoundaryCalculator();
         borders = boundaryCalculator.calculateBoundariesForFirstTime(state, solver);
         System.out.println("✅ Fronteras calculadas en: " + (System.currentTimeMillis() - start) + " ms");
     }

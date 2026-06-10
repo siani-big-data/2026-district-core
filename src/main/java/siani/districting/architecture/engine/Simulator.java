@@ -85,7 +85,7 @@ public class Simulator {
                 .agents(agents)
                 .actionFilter(filter)
                 .serializerManager(manager)
-                .initialStep(manager.getStepCount() - 1)
+                .initialStep(manager.getStepCount())
                 .stepListener(result -> {
                     exportStepCsv(result, table, partyMapping);
                     printStepSummary(result);

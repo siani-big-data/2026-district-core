@@ -46,7 +46,7 @@ public class  ShapefileReader {
     }
 
     private static List<District> buildDistricts(Map<Integer, List<Precinct>> precintsMap) {
-        List<District> districtsList = new ArrayList<District>();
+        List<District> districtsList = new ArrayList<>();
         precintsMap.keySet().forEach(districtId -> {
             District newDistrict = new District(districtId, precintsMap.get(districtId));
             districtsList.add(newDistrict);
@@ -77,7 +77,7 @@ public class  ShapefileReader {
         try (SimpleFeatureIterator iterator = collection.features()) {
             while (iterator.hasNext()) {
                 SimpleFeature feature = iterator.next();
-                createPrecinct(iterator, precinctsMap, feature);
+                createPrecinct(precinctsMap, feature);
                 for (Property property : feature.getProperties()) {
                     if (propertyIsNotValid(property)) continue;
                     String uniqueId = feature.getAttribute("UNIQUE_ID").toString();
@@ -104,7 +104,7 @@ public class  ShapefileReader {
         return !string.matches("-?\\d+");
     }
 
-    private static void createPrecinct(SimpleFeatureIterator iterator, Map<Integer, List<Precinct>> precinctsMap, SimpleFeature feature) {
+    private static void createPrecinct(Map<Integer, List<Precinct>> precinctsMap, SimpleFeature feature) {
         String uniqueId = feature.getAttribute("UNIQUE_ID").toString();
         int districtId = toInt(feature.getAttribute("CONG_DIST").toString());
         GeoShape geoShape = GeoToolsGeoShape.of((Geometry) feature.getDefaultGeometry());
@@ -125,10 +125,8 @@ public class  ShapefileReader {
     }
 
     private static SimpleFeatureCollection getCollectionFrom(DataStore store) throws IOException {
-
         String layerName = store.getTypeNames()[0];
         return store.getFeatureSource(layerName).getFeatures();
-
     }
 
 }
