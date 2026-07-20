@@ -54,6 +54,9 @@ src/main/resources/serializedStates/*.dat
 *.jfr
 *.log
 
+# Copia local de seguridad del GIF del README
+assets/tennessee-simulation.backup.gif
+
 # Ignorar toda la carpeta de recursos (Shapefiles, ZIPs, cachés, etc.)
 src/main/resources/
 
